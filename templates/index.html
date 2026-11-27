@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#06120d">
+  <title>Plant Disease Detection · Project 4</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M5 19c0-9 5-14 14-14 0 9-5 14-14 14Z' fill='%23f2d28a'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+  <div class="bg" aria-hidden="true"></div>
+  <div class="sketch" aria-hidden="true"></div>
+
+  <div class="wrap">
+    <nav class="nav glass">
+      <div class="brand">
+        <span class="logo" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-9 5-14 14-14 0 9-5 14-14 14Z"/><path d="M5 19c3-4 6-7 10-9"/></svg>
+        </span>
+        <span>Plant Disease Detection</span>
+      </div>
+      <div class="nav-meta">
+        <span class="chip">Smart Agriculture</span>
+        <span class="chip chip-live" id="engine">Loading…</span>
+      </div>
+    </nav>
+
+    <section class="hero">
+      <div class="hero-copy">
+        <p class="eyebrow">Project 4 · Smart Agriculture · Leaf Image Processing</p>
+        <h1>Plant Disease <span>Detection</span></h1>
+        <p class="lead">Every infected spot gets its own numbered pin. Colour and texture features feed the classifier, and the advice follows the result.</p>
+        <ul class="chips" aria-label="Features">
+          <li>GrabCut leaf segmentation</li>
+          <li>Per-spot pinpointing</li>
+          <li>Health score</li>
+          <li>CSV export</li>
+        </ul>
+      </div>
+
+      <div class="glass upload" id="drop">
+        <div class="upload-icon" aria-hidden="true">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M5 19c0-9 5-14 14-14 0 9-5 14-14 14Z"/><path d="M5 19c3-4 6-7 10-9"/></svg>
+        </div>
+        <h2>Drop a leaf photo here</h2>
+        <p class="muted">JPG or PNG. One leaf on a plain background gives the cleanest pins.</p>
+        <div class="btnrow">
+          <button class="btn gold" id="pick" type="button">Select photo</button>
+          <button class="btn glass-btn" id="sample" type="button">Try sample leaf</button>
+        </div>
+        <input id="file" type="file" accept="image/*" hidden>
+        <p class="status" id="status" role="status" aria-live="polite"></p>
+        <p class="msg" id="error" role="alert" hidden></p>
+
+        <div class="settings">
+          <label class="set" for="sens">
+            <span>Sensitivity <b id="sensVal">1.00</b></span>
+            <input id="sens" type="range" min="0.5" max="1.5" step="0.05" value="1">
+          </label>
+          <label class="switch" for="clahe">
+            <input id="clahe" type="checkbox">
+            <span class="knob" aria-hidden="true"></span>
+            <span>Boost contrast <small>for dim photos</small></span>
+          </label>
+        </div>
+      </div>
+    </section>
+
+    <main class="grid" id="results" aria-live="polite">
+      <section class="glass viewer" aria-label="Image viewer">
+        <div class="tabs" role="tablist" aria-label="Image view">
+          <button role="tab" id="tab-highlighted" aria-selected="true" data-view="highlighted" type="button">Highlighted</button>
+          <button role="tab" id="tab-original" aria-selected="false" data-view="original" type="button" tabindex="-1">Original</button>
+          <button role="tab" id="tab-mask" aria-selected="false" data-view="mask" type="button" tabindex="-1">Mask</button>
+        </div>
+        <div class="stage" id="stage" data-view="highlighted">
+          <img id="img" alt="Analysed leaf" width="512" height="512">
+          <div class="pins" id="pins"></div>
+        </div>
+        <div class="legend">
+          <span><i class="sw dark"></i>Dark lesion</span>
+          <span><i class="sw brown"></i>Brown lesion</span>
+          <span><i class="sw yellow"></i>Yellow spot</span>
+          <span><i class="sw chl"></i>Chlorosis area</span>
+          <span><i class="sw edge"></i>Leaf edge</span>
+        </div>
+        <p class="caption" id="caption"></p>
+      </section>
+
+      <aside class="side">
+        <section class="glass summary">
+          <p class="eyebrow gold" id="engineLine">—</p>
+          <h2 id="label">Analysing…</h2>
+          <p class="muted" id="desc"></p>
+          <span class="pill" id="sev" data-sev="Low">Severity</span>
+          <div class="metrics">
+            <div class="metric"><span>Affected</span><b id="m-pct">–</b></div>
+            <div class="metric"><span>Health</span><b id="m-health">–</b></div>
+            <div class="metric"><span>Spots</span><b id="m-spots">–</b></div>
+            <div class="metric"><span>Chlorosis</span><b id="m-chl">–</b></div>
+          </div>
+          <div class="sevbar" aria-hidden="true"><i id="marker" style="left:0%"></i></div>
+          <div class="ticks" aria-hidden="true"><span>Low &lt;3%</span><span>Medium 3–15%</span><span>High &gt;15%</span></div>
+        </section>
+
+        <section class="glass">
+          <div class="row-between">
+            <h3>Detected spots</h3>
+            <button class="btn glass-btn small" id="csv" type="button">Export CSV</button>
+          </div>
+          <div class="table-wrap">
+            <table class="spots">
+              <thead><tr><th scope="col">Pin</th><th scope="col">Type</th><th scope="col">Area</th></tr></thead>
+              <tbody id="spotRows"></tbody>
+            </table>
+          </div>
+          <p class="muted small" id="spotNote"></p>
+        </section>
+
+        <section class="glass">
+          <h3>Prediction confidence</h3>
+          <div class="bars" id="preds"></div>
+          <h3 class="gap">Infected colour mix</h3>
+          <div class="bars" id="mix"></div>
+        </section>
+
+        <section class="glass">
+          <h3>Recommended actions</h3>
+          <ul class="actions" id="actions"></ul>
+          <div class="btnrow left">
+            <button class="btn gold" id="dlImg" type="button">Download pinned image</button>
+            <button class="btn glass-btn" id="dlRep" type="button">Report</button>
+          </div>
+        </section>
+      </aside>
+    </main>
+
+    <section class="glass history" id="history" hidden>
+      <div class="row-between">
+        <h3>Recent scans</h3>
+        <button class="link" id="clearHist" type="button">Clear</button>
+      </div>
+      <ul class="hist" id="histList"></ul>
+    </section>
+
+    <footer class="foot">
+      Images are processed in memory and never stored. Results are an aid, not a replacement for a crop specialist's advice.
+    </footer>
+  </div>
+
+  <script src="{{ url_for('static', filename='js/app.js') }}"></script>
+</body>
+</html>
