@@ -1,43 +1,47 @@
-# Leaf Check: Plant Disease Detection (Image Processing + ML)
+# LeafDoc: Plant Disease Detection (Image Processing + ML)
 
 Project 4: Smart Agriculture, Plant Disease Detection Using Leaf Image Processing
 
-Pipeline: **Preprocess -> GrabCut leaf segmentation -> per-spot lesion pinpointing -> feature extraction -> classification**
-Tech: Python (Flask, OpenCV, scikit-image, scikit-learn). Front end HTML/CSS/JS. MERN ki zarurat nahi.
-Server port: **5005**
+**Pipeline:** Preprocess -> GrabCut leaf segmentation -> per-spot lesion pinpointing -> feature extraction -> classification
+
+**Tech:** Python (Flask, OpenCV, scikit-image, scikit-learn). Front end: HTML, CSS, JavaScript. No MERN stack required.
+
+**Local server port:** 5005
 
 ## Folder structure
 
 ```
 leaf-disease-detector/
 ├── app.py                  # Flask server (port 5005) + API
-├── requirements.txt
+├── requirements.txt        # Python libraries
+├── Procfile                # Start command for hosting (Render)
 ├── README.md
-├── templates/index.html    # page
+├── templates/index.html    # Page
 ├── static/
-│   ├── css/style.css       # liquid glass UI, desktop + mobile layout
-│   ├── js/app.js           # upload, pins, table, CSV, report, history
-│   └── img/                # white sketch background (wide + tall)
+│   ├── css/style.css       # Liquid glass UI, desktop and mobile layout
+│   ├── js/app.js           # Upload, pins, table, CSV, report, history
+│   └── img/                # White sketch background (wide and tall)
 ├── src/
-│   ├── preprocess.py       # decode (EXIF fix), resize, noise removal, CLAHE
-│   ├── segment.py          # GrabCut leaf mask + lesion pinpointing
-│   ├── features.py         # colour + shape + texture (GLCM) features
-│   ├── pipeline.py         # sab steps ek saath, spot list aur health score
+│   ├── preprocess.py       # Decode (EXIF fix), resize, noise removal, CLAHE
+│   ├── segment.py          # GrabCut leaf mask and lesion pinpointing
+│   ├── features.py         # Colour, shape and texture (GLCM) features
+│   ├── pipeline.py         # Runs all steps together, spot list and health score
 │   ├── classify.py         # RF / CNN (ONNX) / colour-rule fallback, advice
-│   └── sample.py           # "Try sample leaf" ki nakli image
+│   └── sample.py           # Synthetic image for "Try sample leaf"
 ├── train/
 │   ├── train_classifier.py # Random Forest training, accuracy, confusion matrix
-│   └── make_demo_data.py   # NAKLI data, sirf test ke liye
-├── data/                   # PlantVillage yahan rakhein
-└── models/                 # trained model yahan save hota hai
+│   ├── make_demo_data.py   # Synthetic data, for testing only
+│   └── evaluate_pipeline.py# Accuracy of the image-processing stage on synthetic leaves
+├── data/                   # Put PlantVillage here (not uploaded to GitHub)
+└── models/                 # Trained model is saved here
 ```
 
-## Step by step
+## Step by step (run on your laptop)
 
-### Step 1: Python check
-Python 3.10 ya naya chahiye. `python --version`
+### Step 1: Check Python
+Python 3.10 or newer is required. Check with `python --version`.
 
-### Step 2: Folder aur virtual environment
+### Step 2: Create folder and virtual environment
 ```
 cd leaf-disease-detector
 python -m venv venv
@@ -45,63 +49,69 @@ venv\Scripts\activate          # Windows
 # source venv/bin/activate     # Mac/Linux
 ```
 
-### Step 3: Libraries install
+### Step 3: Install libraries
 ```
 pip install -r requirements.txt
 ```
 
-### Step 4: Server chalayein (port 5005)
+### Step 4: Start the server (port 5005)
 ```
 python app.py
 ```
 - Laptop: `http://localhost:5005`
-- Phone: same WiFi pe, terminal mein dikha "Phone" link. Na khule to firewall mein port 5005 allow karein.
-- Port badalna ho: `PORT=5005 python app.py` (PowerShell: `$env:PORT=5005; python app.py`)
+- Phone: on the same WiFi, use the "Phone" link shown in the terminal. If it does not open, allow port 5005 in the firewall.
+- To change the port: `PORT=5005 python app.py` (PowerShell: `$env:PORT=5005; python app.py`)
 
-Abhi **colour-rule prototype** chalta hai. Trained model ke baad "Random Forest (trained)" dikhega.
+Right now the **colour-rule prototype** runs. After training a model, the page will show "Random Forest (trained)".
 
-### Step 5: Apni photo se test
-- Ek patta, safed ya plain background, achhi roshni, blur nahi.
-- Har spot par numbered pin dikhega. Pin ya table ki row click karke wo spot highlight hota hai.
-- Sensitivity slider aur "Boost contrast" try karein. Badalte hi same photo dobara analyse hoti hai.
+### Step 5: Test with your own photo
+- Use one leaf, on a plain or white background, in good light, without blur.
+- A numbered pin appears on each spot. Click a pin or a table row to highlight that spot.
+- Try the sensitivity slider and "Boost contrast". The same photo is analysed again as soon as you change them.
 
-### Step 6: Asli model (optional, zyada accuracy ke liye)
-1. Kaggle se "PlantVillage dataset" download karein.
-2. `data/PlantVillage/` mein har bimari ka alag folder rakhein.
-3. Training:
+### Step 6: Trained model (optional, for better accuracy)
+1. Download the "PlantVillage dataset" from Kaggle.
+2. Put one folder per disease inside `data/PlantVillage/`.
+3. Train:
 ```
 python train/train_classifier.py --data data/PlantVillage --per-class 300
 ```
-4. Terminal mein **test accuracy** aur har class ki precision/recall dikhegi. `models/leaf_model.joblib` ban jaayega.
-5. Server dobara chalayein. Page pe "Random Forest (trained)" dikhna chahiye.
+4. The terminal prints the **test accuracy** and the precision and recall for each class. It saves `models/leaf_model.joblib`.
+5. Restart the server. The page should show "Random Forest (trained)".
 
 ### Step 7 (optional): CNN (ONNX)
-Agar aap MobileNet jaisa CNN train karke `models/leaf_cnn.onnx` aur `models/classes.json` rakhte hain, to app use karega. Ye path abhi test nahi kiya gaya hai.
+If you train a CNN such as MobileNet and save it as `models/leaf_cnn.onnx` with `models/classes.json`, the app uses it. This path has not been tested yet.
 
-## App ke features
-- Upload, drag-drop, paste, phone camera
-- Highlighted, Original, Mask views
-- Numbered pin har spot par. Pin ya row click se focus.
-- Affected %, health score, spot count, chlorosis (peela area) %
-- Spot table, CSV export
-- Prediction confidence aur colour mix
+## Features
+- Upload, drag and drop, paste, phone camera
+- Highlighted, Original and Mask views
+- A numbered pin on each spot. Click a pin or row to focus it.
+- Affected %, health score, spot count, chlorosis (yellow area) %
+- Spot table and CSV export
+- Prediction confidence and colour mix
 - Recommended actions
-- Download: numbered pin wali image, HTML report
-- Recent scans (sirf browser mein)
+- Downloads: pinned image with numbers, HTML report
+- Recent scans (stored only in the browser)
 
-## Detection kaise hota hai (viva ke liye)
-1. **Leaf segmentation:** HSV se patta seed, phir GrabCut se kinara saaf, sabse bada component.
-2. **Lesion pinpointing:** patte ke median se gehre dhabbe (local contrast). Brown rang wale dhabbe alag type. Chhota peela dhabba spot, bada peela area chlorosis.
-3. **Veins aur green rang** ko bimari se alag rakha gaya hai (patli lines skip, green hue exclude).
-4. **Features (28):** HSV stats, histogram, rang ke ratio, spots ki ginti/size/shape, GLCM texture.
-5. **Classification:** RF (trained), ya CNN (ONNX), ya colour rules.
+## How detection works (for viva)
+1. **Leaf segmentation:** A seed mask is made from HSV colour. GrabCut then cleans the edge and the largest component is kept.
+2. **Lesion pinpointing:** Dark spots are found by comparing each pixel with the local median of the leaf. Brown spots are a separate type. A small yellow spot is a spot, and a large yellow area is chlorosis.
+3. **Veins and green colour** are kept separate from disease (thin lines are skipped and green hue is excluded).
+4. **Features (28):** HSV statistics, hue histogram, colour ratios, spot count, size and shape, and GLCM texture.
+5. **Classification:** Random Forest (trained), or CNN (ONNX), or colour rules.
 
-## Limitations (khud bata dein)
-- Overlap wale do dhabbe kabhi ek pin ban jaate hain.
-- Colour rules sirf prototype hain. Asli diagnosis ke liye trained model chahiye.
-- PlantVillage lab photos par train hota hai. Khet ki photo par accuracy kam aa sakti hai.
-- Accuracy apne training output se hi likhein.
+## Limitations (be honest about these in the viva)
+- Two spots that overlap can become one pin.
+- Colour rules are only a prototype. A trained model is needed for a real diagnosis.
+- PlantVillage images are taken in a lab. Accuracy on field photos can be lower.
+- Report accuracy only from your own training output.
 
-## Dhyan rakhein
-- Recommended actions generic hain. Dawai ke liye local agriculture officer / KVK se puchein.
-- Images server par save nahi hoti, sirf memory mein process hoti hain.
+## Please note
+- Recommended actions are generic. For medicines, ask your local agriculture officer or Krishi Vigyan Kendra (KVK).
+- Images are never saved on the server. They are processed only in memory.
+
+## Deploy (Render)
+- Build command: `pip install -r requirements.txt`
+- Start command: `gunicorn -w 1 -b 0.0.0.0:$PORT app:app --timeout 120`
+- Free tier sleeps after about 15 minutes of inactivity, so the first request can be slow.
+-
