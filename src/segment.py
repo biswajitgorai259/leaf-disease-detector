@@ -52,6 +52,29 @@ def leaf_mask(bgr):
     return _fill_holes(m)
 
 
+def leaf_check(bgr, leaf):
+    """Check karo ki ye sach mein patta hai ya nahi. Returns (ok, message).
+
+    Patte ka rang hara / peela / bhura hota hai (hue 12 se 95). Red poster, sky,
+    insaan, screen waghaira is range mein nahi aate, isliye reject ho jaate hain.
+    """
+    h, w = bgr.shape[:2]
+    lp = leaf > 0
+    leaf_px = int(lp.sum())
+    if leaf_px < 0.03 * h * w:
+        return False, "No clear leaf found. Please use a photo where one leaf fills a good part of the frame."
+    if leaf_px > 0.95 * h * w:
+        return False, "The background is not plain. Please photograph one leaf on a plain background."
+
+    hsv = cv2.cvtColor(bgr, cv2.COLOR_BGR2HSV)
+    H, S = hsv[..., 0][lp], hsv[..., 1][lp]
+    plant = (H >= 12) & (H <= 95) & (S >= 35)
+    green = (H >= 25) & (H <= 95) & (S >= 35)
+    if plant.mean() < 0.6 or green.mean() < 0.15:
+        return False, "This does not look like a leaf. Please upload a clear photo of a single plant leaf."
+    return True, ""
+
+
 def lesion_masks(bgr, leaf, sensitivity=1.0):
     """Bimari ke spots dhoondhna. Returns lesion mask, alag alag masks, chlorosis aur spot list."""
     lp = leaf > 0

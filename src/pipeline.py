@@ -3,7 +3,7 @@ import cv2
 
 from .features import extract_features
 from .preprocess import preprocess
-from .segment import leaf_mask, lesion_masks, overlay
+from .segment import leaf_check, leaf_mask, lesion_masks, overlay
 
 MAX_PINS = 80
 
@@ -12,9 +12,13 @@ def severity_of(pct: float) -> str:
     return "Low" if pct < 3 else ("Medium" if pct < 15 else "High")
 
 
-def run_pipeline(bgr, sensitivity=1.0, clahe=False, style="outline", size=512):
+def run_pipeline(bgr, sensitivity=1.0, clahe=False, style="outline", size=512, check=True):
     img = preprocess(bgr, size=size, clahe=clahe)
     leaf = leaf_mask(img)
+    if check:
+        ok, msg = leaf_check(img, leaf)
+        if not ok:
+            raise ValueError(msg)
     les = lesion_masks(img, leaf, sensitivity)
 
     disease = les["lesion"]
